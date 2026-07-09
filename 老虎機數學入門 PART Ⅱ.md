@@ -1,7 +1,5 @@
 # 老虎機數學入門 PART Ⅱ
 
-Source: https://ezslotdesign.com/slotmath2/
-
 這篇是 PART I 的延伸。PART I 先示範一條 Line 獎與簡化 Scatter 的 RTP 計算；PART II 則加入 5 軸 Scatter 觸發免費遊戲，以及免費遊戲中的再觸發計算。
 
 ## 文章設定
