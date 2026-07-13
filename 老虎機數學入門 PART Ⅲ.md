@@ -396,3 +396,133 @@ RTP
 ```
 
 就是一種適合 Excel 的 partition enumeration 方法。
+
+---
+
+## Partition 要怎麼切才不重複計獎
+
+PART III 的核心問題是：
+
+```text
+同一條線上，Wild 可以同時被看成一般圖案的替代，也可能自己形成 Wild 連線。
+```
+
+例如：
+
+```text
+W W W K K
+```
+
+這一條線同時可以被解讀成：
+
+```text
+K 5 連線
+W 3 連線
+```
+
+真實遊戲通常不是兩個都給，而是同一條 line 只給最高獎項：
+
+```text
+pay = MAX(K 5 連線賠率, W 3 連線賠率)
+```
+
+所以 partition 的切法要讓每一種 stop 組合只落在一個計算區塊，或至少在同一列裡用 `MAX()` 決定最後派彩，不能讓同一個 Wild 連線在 K/Q/J/10/9 分頁各算一次。
+
+### 1. 沒有 Wild 的一般圖案區塊
+
+這一區只放完全沒有 Wild 參與的普通連線。
+
+以 K 為例：
+
+```text
+K K K K K
+K K K K X_WK
+K K K X_WK any
+```
+
+其中：
+
+```text
+X_WK = 該軸不是 W，也不是 K 的 stop 數
+```
+
+這樣可以保證 4 連線、3 連線不會被更長的 K/WK 連線吃掉。
+
+### 2. 有 Wild 替代的一般圖案區塊
+
+這一區放「winning span 裡有 Wild，也至少有一個真正的目標圖案」的組合。
+
+以 K 為例，5 連線會列：
+
+```text
+W K K K K
+K W K K K
+K K W K K
+K K K W K
+K K K K W
+
+W W K K K
+W K W K K
+W K K W K
+...
+```
+
+但這一區不要放純 Wild leading 的列，例如：
+
+```text
+W W W X_WK any
+W W W W X_WK
+W W W W W
+```
+
+原因是這些列在 winning span 內沒有真正的 K，它們本質上是 Wild 連線，應該交給「純 Wild 區塊」處理。若每個一般圖案分頁都放一次，就會讓同一個 `W W W ...` 停輪型態在 K/Q/J/10/9 都被算到。
+
+換句話說，一般圖案 mixed partition 的規則是：
+
+```text
+1. winning span 內至少有一個 W
+2. winning span 內至少有一個真正的目標圖案
+3. 若前導 Wild 數 >= 3，該列派彩用：
+   MAX(一般圖案連線賠率, Wild 連線賠率)
+```
+
+例如：
+
+```text
+W W W K K
+```
+
+這列可以放在 K 的 mixed 區塊，因為 winning span 內有真正的 K。
+
+派彩判斷：
+
+```text
+K 5 = 100
+W 3 = 150
+pay = MAX(100, 150) = 150
+```
+
+### 3. 純 Wild 區塊
+
+純 Wild 區塊專門處理沒有一般圖案可歸屬的前導 Wild 連線：
+
+```text
+W W W W W
+W W W W S
+W W W S any
+```
+
+這裡的 `S` 只是文章用來表示「斷掉 Wild 連線的非 Wild 符號」，不是一定指 Scatter。重點是第 4 軸或第 5 軸不是 W，讓 Wild 連線停在 3 連或 4 連。
+
+### 實作上的檢查原則
+
+如果用 Excel 手列 partition，可以用這個順序檢查：
+
+```text
+1. 先列沒有 Wild 的一般圖案連線。
+2. 再列有 Wild 替代、且 winning span 內至少有一個真正目標圖案的列。
+3. 前導 Wild >= 3 的 mixed 列，用 MAX(一般圖案賠率, Wild 賠率)。
+4. 純 Wild leading 的列只放在純 Wild 區塊，不放進 K/Q/J/10/9 的 mixed 區塊。
+```
+
+這樣切的好處是：文章式 partition 仍然可以用乘法快速算出每列出現次數，同時避免把同一個純 Wild 連線在多個一般圖案分頁重複計獎。
